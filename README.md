@@ -1,4 +1,4 @@
-# Rylune Utils 1.1.0
+# Rylune Utils 1.2.0
 Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All four modules are disabled initially. Uses a custom dark in-game menu; no server installation or account authentication required by the mod itself.
 
 ## Controls
@@ -10,8 +10,17 @@ Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All four modules are
 ## Features
 Monochrome black/charcoal theme, rounded panels, responsive sidebar or compact category tabs, animated switches and hover states, search, independent toggles, paginated settings, color hex input, adjustable values, previews, reset buttons and JSON persistence (config/rylune-utils.json). Zoom: 2–12x, hold/toggle, smoothing and speed. Sprint: status HUD, position, color and death reset. Crosshair: plus/dot/T/square, gap, size, thickness, outline, dot, RGB and opacity. Block overlay: outline RGB, width, opacity and optional translucent fill of the targeted block's outline shape.
 
+## 1.2.0 performance and customization
+- Crosshair editor: draw or erase on a 15×15 grid, with a single selectable RGB color and live preview. Custom shape is saved in JSON.
+- HSV color wheel and brightness control for crosshair and block outline. Existing RGB controls and hex field remain.
+- Crosshair presets and drawings are rasterized into one cached 65×65 GPU texture; only regenerate on changes. Only the vanilla crosshair drawing call is intercepted, not every GUI sprite.
+- Idle zoom bypasses smoothing. Sprint key handling is scoped to keyboard input. Sprint HUD exits before accessing the client when disabled.
+- Block fill caches shape geometry and emits no temporary boxes or varargs per frame. For lowest overhead, set fill opacity to zero and outline width to one.
+- No new background threads, network requests or shader blur. The new editors only render when open.
+- Actual FPS improvement has not been benchmarked in Minecraft; compare the same world and settings.
+
 ## Build locally
-Install Java 21 and Gradle 9.2.1. From this folder run gradle clean build. The distributable (not the sources JAR) is build/libs/rylune-utils-1.21.11-1.1.0.jar. No Gradle wrapper is included; use an installed Gradle or the supplied GitHub Actions workflow.
+Install Java 21 and Gradle 9.2.1. From this folder run gradle clean build. The distributable (not the sources JAR) is build/libs/rylune-utils-1.21.11-1.2.0.jar. No Gradle wrapper is included; use an installed Gradle or the supplied GitHub Actions workflow.
 
 ## Build on GitHub
 The supplied workflow builds the project and publishes the versioned JAR after a successful build. In Actions select Build Rylune Utils > Run workflow.

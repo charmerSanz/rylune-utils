@@ -72,9 +72,9 @@ public final class ModuleScreen extends Screen {
     private void gear(DrawContext d,int x,int y,int col){border(d,x-4,y-4,9,9,col);d.fill(x-1,y-6,x+2,y-4,col);d.fill(x-1,y+5,x+2,y+7,col);d.fill(x-6,y-1,x-4,y+2,col);d.fill(x+5,y-1,x+7,y+2,col);d.fill(x-1,y-1,x+2,y+2,col);}
     @Override public void render(DrawContext d,int mx,int my,float delta){
         long now=System.nanoTime();frame=(float)(1-Math.exp(-Math.min(.05,(now-lastFrame)/1e9)*20));lastFrame=now;
-        hits.clear();for(int i=0;i<4;i++)switchState[i]+=( (c().enabled(i)?1:0)-switchState[i])*frame;
+        hits.clear();for(int i=0;i<4;i++){float target=c().enabled(i)?1:0;switchState[i]=Math.abs(target-switchState[i])<.01f?target:switchState[i]+(target-switchState[i])*frame;}
         // Draw the dimmer directly: never invokes a shader or blur pass.
-        float fade=Math.min(1,(now-opened)/180_000_000f);d.fill(0,0,width,height,((int)(217*fade))<<24);
+        d.fill(0,0,width,height,0xDA000000);
         round(d,px-3,py-2,pw+6,ph+7,12,0x70000000);panel(d,px,py,pw,ph,9,BG,BORDER);
         if(side>0){round(d,px+1,py+1,side-1,ph-2,8,SIDE);d.fill(px+side-1,py+12,px+side,py+ph-12,BORDER);renderSidebar(d,mx,my);}else if(selected<0){logo(d,px+9,py+10);text(d,"RYLUNE",px+34,py+16,WHITE);}
         if(selected<0)renderModules(d,mx,my);else renderSettings(d,mx,my);
@@ -91,7 +91,7 @@ public final class ModuleScreen extends Screen {
             if(i==0){for(int k=0;k<4;k++)round(d,x+10+(k%2)*5,y+6+(k/2)*5,4,4,1,active?WHITE:DIM);}else if(i==4){round(d,x+10,y+7,9,7,3,active?WHITE:DIM);}else icon(d,i==1?0:i==2?1:2,x+14,y+11,active?WHITE:DIM,4);
             text(d,FILTERS[i],x+25,y+7,active?WHITE:MUTED);hits.add(new Hit(x,y,w,21,()->{filter=f;change(-1);}));
         }
-        if(ph>=220){d.fill(px+12,py+ph-40,px+side-12,py+ph-39,BORDER);text(d,"RYLUNE UTILS",px+12,py+ph-29,DIM);text(d,"v1.1.0",px+12,py+ph-17,MUTED);}
+        if(ph>=220){d.fill(px+12,py+ph-40,px+side-12,py+ph-39,BORDER);text(d,"RYLUNE UTILS",px+12,py+ph-29,DIM);text(d,"v1.2.0",px+12,py+ph-17,MUTED);}
     }
     private void renderModules(DrawContext d,int mx,int my){
         int x=contentX; if(side>0)text(d,"Modules",x,py+16,WHITE);
@@ -131,9 +131,11 @@ public final class ModuleScreen extends Screen {
     private List<Setting> settings(){var s=new ArrayList<Setting>();Config c=c();switch(selected){
         case 0->{s.add(number("Magnification",()->c.zoomFactor,v->c.zoomFactor=v,2,12,1,"x"));s.add(bool("Toggle mode",()->c.zoomToggle,v->{c.zoomToggle=v;RyluneUtils.zoomLatched=false;}));s.add(bool("Smooth transition",()->c.zoomSmooth,v->c.zoomSmooth=v));s.add(number("Transition speed",()->c.zoomSpeed,v->c.zoomSpeed=v,3,24,1,""));}
         case 1->{s.add(bool("Show sprint status",()->c.sprintHud,v->c.sprintHud=v));s.add(bool("Reset after death / world",()->c.sprintReset,v->c.sprintReset=v));s.add(number("HUD X",()->c.sprintX,v->c.sprintX=v,0,200,4,""));s.add(number("HUD Y",()->c.sprintY,v->c.sprintY=v,0,200,4,""));}
-        case 2->{String[] shapes={"Plus","Dot","T-shape","Square"};s.add(new Setting("Shape",()->shapes[c.crossShape],()->c.crossShape=(c.crossShape+3)%4,()->c.crossShape=(c.crossShape+1)%4,null));s.add(number("Length",()->c.crossLength,v->c.crossLength=v,1,16,1,""));s.add(number("Gap",()->c.crossGap,v->c.crossGap=v,0,12,1,""));s.add(number("Thickness",()->c.crossThickness,v->c.crossThickness=v,1,5,1,""));s.add(number("Opacity",()->c.crossOpacity,v->c.crossOpacity=v,10,100,5,"%"));s.add(bool("Center dot",()->c.crossDot,v->c.crossDot=v));s.add(bool("Black outline",()->c.crossOutline,v->c.crossOutline=v));}
+        case 2->{String[] shapes={"Plus","Dot","T-shape","Square","Drawn"};s.add(new Setting("Shape",()->shapes[c.crossShape],()->c.crossShape=(c.crossShape+4)%5,()->c.crossShape=(c.crossShape+1)%5,null));s.add(number("Length",()->c.crossLength,v->c.crossLength=v,1,16,1,""));s.add(number("Gap",()->c.crossGap,v->c.crossGap=v,0,12,1,""));s.add(number("Thickness",()->c.crossThickness,v->c.crossThickness=v,1,5,1,""));s.add(number("Opacity",()->c.crossOpacity,v->c.crossOpacity=v,10,100,5,"%"));s.add(bool("Center dot",()->c.crossDot,v->c.crossDot=v));s.add(bool("Black outline",()->c.crossOutline,v->c.crossOutline=v));}
         case 3->{s.add(number("Outline width",()->c.blockWidth,v->c.blockWidth=v,1,6,1,""));s.add(number("Outline opacity",()->c.blockOpacity,v->c.blockOpacity=v,10,100,5,"%"));s.add(number("Fill opacity",()->c.blockFillOpacity,v->c.blockFillOpacity=v,0,70,5,"%"));}
-    }if(selected!=0){String[] labels={"Red","Green","Blue"};for(int i=0;i<3;i++){final int shift=(2-i)*8;s.add(new Setting(labels[i],()->Integer.toString((getColor()>>shift)&255),()->updateChannel(shift,-5),()->updateChannel(shift,5),()->0xFF000000|getColor()));}}return s;}
+    }if(selected==2){s.add(0,new Setting("Draw your crosshair",()->"Edit",()->client.setScreen(new CrosshairEditor(this)),()->client.setScreen(new CrosshairEditor(this)),null));}
+        if(selected==2||selected==3){s.add(selected==2?1:0,new Setting("Color wheel",()->"Open",()->client.setScreen(new ColorWheelScreen(this,()->getColor(),v->setColor(v))),()->client.setScreen(new ColorWheelScreen(this,()->getColor(),v->setColor(v))),null));}
+        if(selected!=0){String[] labels={"Red","Green","Blue"};for(int i=0;i<3;i++){final int shift=(2-i)*8;s.add(new Setting(labels[i],()->Integer.toString((getColor()>>shift)&255),()->updateChannel(shift,-5),()->updateChannel(shift,5),()->0xFF000000|getColor()));}}return s;}
     private void renderSettings(DrawContext d,int mx,int my){
         int x=contentX,w=contentW;button(d,x,py+10,23,20,"<",mx,my,false,()->change(-1));text(d,textRenderer.trimToWidth(NAMES[selected],w-62),x+30,py+16,WHITE);
         d.fill(x,py+39,x+w,py+40,BORDER);
@@ -143,7 +145,8 @@ public final class ModuleScreen extends Screen {
         for(int i=page*rows;i<Math.min(options.size(),(page+1)*rows);i++){
             var a=options.get(i);int y=top+(i-page*rows)*24;round(d,x,y,listW,22,4,CARD);String value=a.text.get();
             text(d,textRenderer.trimToWidth(a.label,Math.max(15,listW-93)),x+7,y+7,WHITE);
-            if(value.equals("On")||value.equals("Off")){boolean on=value.equals("On");int sx=x+listW-35;round(d,sx,y+4,28,14,7,on?ACCENT:0xFF414141);round(d,sx+(on?16:2),y+6,10,10,5,on?BG:MUTED);hits.add(new Hit(sx-2,y,32,22,()->{a.plus.run();c().save();}));}
+            if(value.equals("Edit")||value.equals("Open")){button(d,x+listW-47,y+3,42,16,value,mx,my,false,a.plus);}
+            else if(value.equals("On")||value.equals("Off")){boolean on=value.equals("On");int sx=x+listW-35;round(d,sx,y+4,28,14,7,on?ACCENT:0xFF414141);round(d,sx+(on?16:2),y+6,10,10,5,on?BG:MUTED);hits.add(new Hit(sx-2,y,32,22,()->{a.plus.run();c().save();}));}
             else{if(a.color!=null&&listW>=160)round(d,x+listW-87,y+7,8,8,2,a.color.getAsInt());button(d,x+listW-75,y+3,16,16,"-",mx,my,false,()->{a.minus.run();c().save();});center(d,value,x+listW-38,y+7,WHITE);button(d,x+listW-18,y+3,16,16,"+",mx,my,false,()->{a.plus.run();c().save();});}
         }
         if(preview>0){int bx=x+listW+9,bh=available;panel(d,bx,top,preview,bh,6,SIDE,BORDER);center(d,"LIVE PREVIEW",bx+preview/2,top+9,DIM);int cx=bx+preview/2,cy=top+bh/2+6;
@@ -152,7 +155,7 @@ public final class ModuleScreen extends Screen {
         button(d,x+73,y,39,20,"Reset",mx,my,false,()->{reset();init();});
         if(selected!=0){int hx=px+pw-82;panel(d,hx,y,70,20,4,SIDE,BORDER);if(w>=235){round(d,hx-20,y+4,12,12,3,0xFF000000|getColor());text(d,"HEX",hx-43,y+6,DIM);}}else if(w>=235){String hint="Change keys in Controls";text(d,hint,x+w-textRenderer.getWidth(hint),y+6,DIM);}
     }
-    private void reset(){Config n=new Config(),c=c();switch(selected){case 0->{c.zoomFactor=n.zoomFactor;c.zoomSpeed=n.zoomSpeed;c.zoomSmooth=n.zoomSmooth;c.zoomToggle=n.zoomToggle;RyluneUtils.zoomLatched=false;}case 1->{c.sprintHud=n.sprintHud;c.sprintReset=n.sprintReset;c.sprintX=n.sprintX;c.sprintY=n.sprintY;c.sprintColor=n.sprintColor;}case 2->{c.crossColor=n.crossColor;c.crossOpacity=n.crossOpacity;c.crossLength=n.crossLength;c.crossGap=n.crossGap;c.crossThickness=n.crossThickness;c.crossShape=n.crossShape;c.crossDot=n.crossDot;c.crossOutline=n.crossOutline;}case 3->{c.blockColor=n.blockColor;c.blockOpacity=n.blockOpacity;c.blockWidth=n.blockWidth;c.blockFillOpacity=n.blockFillOpacity;}}c.save();}
+    private void reset(){Config n=new Config(),c=c();switch(selected){case 0->{c.zoomFactor=n.zoomFactor;c.zoomSpeed=n.zoomSpeed;c.zoomSmooth=n.zoomSmooth;c.zoomToggle=n.zoomToggle;RyluneUtils.zoomLatched=false;}case 1->{c.sprintHud=n.sprintHud;c.sprintReset=n.sprintReset;c.sprintX=n.sprintX;c.sprintY=n.sprintY;c.sprintColor=n.sprintColor;}case 2->{c.crossColor=n.crossColor;c.crossOpacity=n.crossOpacity;c.crossLength=n.crossLength;c.crossGap=n.crossGap;c.crossThickness=n.crossThickness;c.crossShape=n.crossShape;c.crossDot=n.crossDot;c.crossOutline=n.crossOutline;c.customPixels=n.customPixels;}case 3->{c.blockColor=n.blockColor;c.blockOpacity=n.blockOpacity;c.blockWidth=n.blockWidth;c.blockFillOpacity=n.blockFillOpacity;}}c.save();}
     @Override public boolean mouseClicked(Click click,boolean doubled){if(click.button()==0){for(Hit h:List.copyOf(hits))if(h.contains(click.x(),click.y())){h.action.run();return true;}}return super.mouseClicked(click,doubled);}
     @Override public boolean keyPressed(KeyInput input){if(input.key()==GLFW.GLFW_KEY_RIGHT_SHIFT){close();return true;}if(input.key()==GLFW.GLFW_KEY_ESCAPE&&selected>=0){change(-1);return true;}return super.keyPressed(input);}
     @Override public void close(){c().save();super.close();}

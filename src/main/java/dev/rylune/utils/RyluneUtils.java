@@ -36,9 +36,11 @@ public final class RyluneUtils implements ClientModInitializer {
         if(config.sprintReset && client.player!=null && !client.player.isAlive()) sprintActive=false;
     }
     public static float zoomFov(float vanilla) {
+        if(!config.zoom){zoomAmount=1f;lastFrame=0;return vanilla;}
         var client=MinecraftClient.getInstance();
         boolean active=config.zoom && zoomKey!=null && client.player!=null && client.currentScreen==null && (config.zoomToggle?zoomLatched:zoomKey.isPressed());
         float target=active?config.zoomFactor:1f;
+        if(target==zoomAmount){lastFrame=0;return vanilla/zoomAmount;}
         long now=System.nanoTime(); float dt=lastFrame==0?0.016f:Math.min(.1f,(now-lastFrame)/1_000_000_000f); lastFrame=now;
         if(config.zoomSmooth && config.zoom) zoomAmount+=(target-zoomAmount)*(1f-(float)Math.exp(-config.zoomSpeed*dt)); else zoomAmount=target;
         if(Math.abs(zoomAmount-target)<.002f) zoomAmount=target;

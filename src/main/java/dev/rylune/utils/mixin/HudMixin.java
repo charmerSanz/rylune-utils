@@ -11,8 +11,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class HudMixin {
     @Inject(method="render",at=@At("TAIL"))
     private void rylune$hud(DrawContext ctx,RenderTickCounter ticks,CallbackInfo ci) {
-        var c=RyluneUtils.config; var mc=MinecraftClient.getInstance();
-        if(!c.sprint || !c.sprintHud || mc.player==null || mc.options.hudHidden || mc.currentScreen!=null) return;
+        var c=RyluneUtils.config;
+        if(!c.sprint || !c.sprintHud) return;
+        var mc=MinecraftClient.getInstance();
+        if( mc.player==null || mc.options.hudHidden || mc.currentScreen!=null) return;
         String text=RyluneUtils.sprintActive?(mc.player.isSprinting()?"Sprint: active":"Sprint: ready"):"Sprint: off";
         ctx.drawTextWithShadow(mc.textRenderer,text,Math.min(c.sprintX,Math.max(0,ctx.getScaledWindowWidth()-mc.textRenderer.getWidth(text))),Math.min(c.sprintY,Math.max(0,ctx.getScaledWindowHeight()-10)),0xFF000000|c.sprintColor);
     }

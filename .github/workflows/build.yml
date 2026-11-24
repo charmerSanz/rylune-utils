@@ -25,17 +25,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: RyluneUtils-1.21.11
-          path: build/libs/rylune-utils-1.21.11-1.1.0.jar
+          path: build/libs/rylune-utils-1.21.11-1.2.0.jar
           if-no-files-found: error
-      - name: Publish v1.1.0 after successful build
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/tags/v1.1.0'
+      - name: Publish v1.2.0 after successful build
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/tags/v1.2.0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag=v1.1.0
-          jar=build/libs/rylune-utils-1.21.11-1.1.0.jar
+          tag=v1.2.0
+          jar=build/libs/rylune-utils-1.21.11-1.2.0.jar
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$jar" --clobber
           else
-            gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "Rylune Utils v1.1.0" --notes "Minecraft 1.21.11 Fabric | Java 21 | Dark Edition. Includes Zoom, Toggle Sprint, Custom Crosshair and Block Overlay. Requires Fabric API. In-game testing not yet verified."
+            gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "Rylune Utils v1.2.0" --notes "Minecraft 1.21.11 Fabric | Java 21 | Performance and customization update. Includes a drawn crosshair editor, HSV color wheels, cached crosshair texture and optimized rendering. Requires Fabric API. In-game testing not yet verified."
           fi
