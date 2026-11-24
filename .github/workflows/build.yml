@@ -1,0 +1,41 @@
+name: Build Rylune Utils
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+permissions:
+  contents: write
+concurrency:
+  group: rylune-utils-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.2.1'
+      - run: gradle --no-daemon clean build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RyluneUtils-1.21.11
+          path: build/libs/rylune-utils-1.21.11-1.1.0.jar
+          if-no-files-found: error
+      - name: Publish v1.1.0 after successful build
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/tags/v1.1.0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=v1.1.0
+          jar=build/libs/rylune-utils-1.21.11-1.1.0.jar
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$jar" --clobber
+          else
+            gh release create "$tag" "$jar" --target "$GITHUB_SHA" --title "Rylune Utils v1.1.0" --notes "Minecraft 1.21.11 Fabric | Java 21 | Dark Edition. Includes Zoom, Toggle Sprint, Custom Crosshair and Block Overlay. Requires Fabric API. In-game testing not yet verified."
+          fi
