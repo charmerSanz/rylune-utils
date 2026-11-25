@@ -10,9 +10,10 @@ public final class Config {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("rylune-utils.json");
     public boolean zoom = false, sprint = false, crosshair = false, block = false;
-    public boolean zoomToggle = false, zoomSmooth = true;
+    public int performanceRevision = 0;
+    public boolean zoomToggle = false, zoomSmooth = false;
     public int zoomFactor = 4, zoomSpeed = 12;
-    public boolean sprintHud = true, sprintReset = true;
+    public boolean sprintHud = false, sprintReset = true;
     public int sprintColor = 0xFFFFFF, sprintX = 8, sprintY = 8;
     public int crossColor = 0xFFFFFF, crossOpacity = 100, crossLength = 5, crossGap = 3, crossThickness = 1, crossShape = 0;
     public String customPixels = "000000000000000".repeat(7)+"000000010000000"+"000000000000000".repeat(7);
@@ -25,12 +26,12 @@ public final class Config {
         zoomFactor=clamp(zoomFactor,2,12); zoomSpeed=clamp(zoomSpeed,3,24);
         crossOpacity=clamp(crossOpacity,10,100); crossLength=clamp(crossLength,1,16); crossGap=clamp(crossGap,0,12); crossThickness=clamp(crossThickness,1,5); crossShape=clamp(crossShape,0,4);
         if(customPixels==null || customPixels.length()!=225 || !customPixels.matches("[01]+")) customPixels=new Config().customPixels;
-        blockOpacity=clamp(blockOpacity,10,100); blockWidth=clamp(blockWidth,1,6); blockFillOpacity=clamp(blockFillOpacity,0,70);
+        blockOpacity=clamp(blockOpacity,10,100); blockWidth=clamp(blockWidth,1,6); blockFillOpacity=0;
         sprintX=clamp(sprintX,0,200); sprintY=clamp(sprintY,0,200);
         sprintColor &= 0xFFFFFF; crossColor &= 0xFFFFFF; blockColor &= 0xFFFFFF;
     }
     public static Config load() {
-        try { if(Files.exists(FILE)) { Config c=GSON.fromJson(Files.readString(FILE),Config.class); if(c!=null) { c.validate(); return c; } } }
+        try { if(Files.exists(FILE)) { Config c=GSON.fromJson(Files.readString(FILE),Config.class); if(c!=null) { c.validate(); if(c.performanceRevision<3){c.performanceRevision=3;c.zoomSmooth=false;c.sprintHud=false;c.blockWidth=1;c.save();} return c; } } }
         catch(Exception e) { LoggerFactory.getLogger("RyluneUtils").warn("Could not read Rylune Utils configuration",e); }
         return new Config();
     }

@@ -15,6 +15,8 @@ public final class RyluneUtils implements ClientModInitializer {
     public static boolean sprintActive, zoomLatched;
     private static float zoomAmount = 1f;
     private static long lastFrame;
+    private static boolean zoomRequested;
+    private static float targetFactor=1f;
     private static Object lastWorld;
     @Override public void onInitializeClient() {
         config=Config.load();
@@ -23,7 +25,6 @@ public final class RyluneUtils implements ClientModInitializer {
         zoomKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.ryluneutils.zoom",GLFW.GLFW_KEY_C,category));
         sprintKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.ryluneutils.sprint",GLFW.GLFW_KEY_R,category));
         ClientTickEvents.END_CLIENT_TICK.register(RyluneUtils::tick);
-        BlockFill.register();
     }
     private static void tick(MinecraftClient client) {
         if(lastWorld!=client.world) { lastWorld=client.world; zoomLatched=false; if(config.sprintReset || client.world==null) sprintActive=false; }
@@ -34,15 +35,16 @@ public final class RyluneUtils implements ClientModInitializer {
         if(!config.sprint) sprintActive=false;
         if(!config.zoom || !config.zoomToggle) zoomLatched=false;
         if(config.sprintReset && client.player!=null && !client.player.isAlive()) sprintActive=false;
+        zoomRequested=playing && config.zoom && (config.zoomToggle?zoomLatched:zoomKey.isPressed());
+        targetFactor=zoomRequested?config.zoomFactor:1f;
     }
     public static float zoomFov(float vanilla) {
         if(!config.zoom){zoomAmount=1f;lastFrame=0;return vanilla;}
-        var client=MinecraftClient.getInstance();
-        boolean active=config.zoom && zoomKey!=null && client.player!=null && client.currentScreen==null && (config.zoomToggle?zoomLatched:zoomKey.isPressed());
-        float target=active?config.zoomFactor:1f;
+        float target=targetFactor;
+        if(!config.zoomSmooth){zoomAmount=target;lastFrame=0;return target==1f?vanilla:vanilla/target;}
         if(target==zoomAmount){lastFrame=0;return vanilla/zoomAmount;}
         long now=System.nanoTime(); float dt=lastFrame==0?0.016f:Math.min(.1f,(now-lastFrame)/1_000_000_000f); lastFrame=now;
-        if(config.zoomSmooth && config.zoom) zoomAmount+=(target-zoomAmount)*(1f-(float)Math.exp(-config.zoomSpeed*dt)); else zoomAmount=target;
+        zoomAmount+=(target-zoomAmount)*Math.min(1f,config.zoomSpeed*dt);
         if(Math.abs(zoomAmount-target)<.002f) zoomAmount=target;
         return vanilla/Math.max(1f,zoomAmount);
     }

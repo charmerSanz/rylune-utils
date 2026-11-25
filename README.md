@@ -1,4 +1,4 @@
-# Rylune Utils 1.2.0
+# Rylune Utils 1.3.0
 Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All four modules are disabled initially. Uses a custom dark in-game menu; no server installation or account authentication required by the mod itself.
 
 ## Controls
@@ -8,19 +8,27 @@ Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All four modules are
 - Rebind all three in Options > Controls > Key Binds > Rylune Utils. If another mod claims the same key, rebind one of them.
 
 ## Features
-Monochrome black/charcoal theme, rounded panels, responsive sidebar or compact category tabs, animated switches and hover states, search, independent toggles, paginated settings, color hex input, adjustable values, previews, reset buttons and JSON persistence (config/rylune-utils.json). Zoom: 2–12x, hold/toggle, smoothing and speed. Sprint: status HUD, position, color and death reset. Crosshair: plus/dot/T/square, gap, size, thickness, outline, dot, RGB and opacity. Block overlay: outline RGB, width, opacity and optional translucent fill of the targeted block's outline shape.
+Monochrome black/charcoal theme, rounded panels, responsive sidebar or compact category tabs, animated switches and hover states, search, independent toggles, paginated settings, color hex input, adjustable values, previews, reset buttons and JSON persistence (config/rylune-utils.json). Zoom: 2–12x, hold/toggle, smoothing and speed. Sprint: optional status HUD (off by default), position, color and death reset. Crosshair: plus/dot/T/square, gap, size, thickness, outline, dot, RGB and opacity. Block overlay: outline RGB, width, opacity and outline opacity.
 
-## 1.2.0 performance and customization
+## 1.3.0 performance and customization
 - Crosshair editor: draw or erase on a 15×15 grid, with a single selectable RGB color and live preview. Custom shape is saved in JSON.
 - HSV color wheel and brightness control for crosshair and block outline. Existing RGB controls and hex field remain.
 - Crosshair presets and drawings are rasterized into one cached 65×65 GPU texture; only regenerate on changes. Only the vanilla crosshair drawing call is intercepted, not every GUI sprite.
 - Idle zoom bypasses smoothing. Sprint key handling is scoped to keyboard input. Sprint HUD exits before accessing the client when disabled.
-- Block fill caches shape geometry and emits no temporary boxes or varargs per frame. For lowest overhead, set fill opacity to zero and outline width to one.
+- Removed the block fill rendering event and all fill geometry; colored outlines are preserved.
 - No new background threads, network requests or shader blur. The new editors only render when open.
 - Actual FPS improvement has not been benchmarked in Minecraft; compare the same world and settings.
 
+## Lite rendering changes
+- Removed all block-fill callbacks and geometry; the outline remains customizable.
+- Crosshair uses a cropped cached texture and conditional sprite hook, without WrapOperation dispatch. The drawing editor and color wheels remain.
+- Sprint uses one keyboard-tick injection; zoom input is read on client ticks, not each frame. Smoothing is optional and off by default.
+- Static menu cards and switches; one-click Disable all for isolating module-specific FPS issues.
+- Existing configurations are migrated once: preserve colors, designs and module states; turn off smoothing and sprint HUD, reset outline width to one and remove fill.
+- No FPS benchmark is claimed. For diagnosis compare identical world/settings with mod removed, installed with all modules disabled, and one module enabled at a time.
+
 ## Build locally
-Install Java 21 and Gradle 9.2.1. From this folder run gradle clean build. The distributable (not the sources JAR) is build/libs/rylune-utils-1.21.11-1.2.0.jar. No Gradle wrapper is included; use an installed Gradle or the supplied GitHub Actions workflow.
+Install Java 21 and Gradle 9.2.1. From this folder run gradle clean build. The distributable (not the sources JAR) is build/libs/rylune-utils-1.21.11-1.3.0.jar. No Gradle wrapper is included; use an installed Gradle or the supplied GitHub Actions workflow.
 
 ## Build on GitHub
 The supplied workflow builds the project and publishes the versioned JAR after a successful build. In Actions select Build Rylune Utils > Run workflow.
@@ -37,5 +45,5 @@ Compilation is handled by GitHub Actions; Minecraft runtime testing has not been
 3. Enable Zoom and test C hold and toggle; ensure normal FOV returns when disabled.
 4. Enable Sprint; press R and move forward, toggle off; test hunger, death and HUD visibility.
 5. Enable Crosshair; try all shapes/colors/opacity and ensure vanilla attack indicator remains.
-6. Enable Block Overlay; change width/color/fill; test full blocks, slabs, stairs and transparent blocks.
+6. Enable Block Overlay; change width/color/opacity; test full blocks, slabs, stairs and transparent blocks.
 7. Close/reopen the game and check JSON settings persist; repeat with other client mods installed.

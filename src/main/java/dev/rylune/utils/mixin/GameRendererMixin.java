@@ -9,6 +9,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class GameRendererMixin {
     @Inject(method="getFov",at=@At("RETURN"),cancellable=true)
     private void rylune$zoom(Camera camera,float tickProgress,boolean changingFov,CallbackInfoReturnable<Float> cir) {
-        if(changingFov) cir.setReturnValue(RyluneUtils.zoomFov(cir.getReturnValue()));
+        if(changingFov && RyluneUtils.config.zoom){float old=cir.getReturnValueF();float next=RyluneUtils.zoomFov(old);if(next!=old)cir.setReturnValue(next);}
     }
 }

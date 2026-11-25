@@ -1,20 +1,19 @@
 package dev.rylune.utils.mixin;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.rylune.utils.RyluneUtils;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.input.Input;
 import net.minecraft.client.input.KeyboardInput;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.util.PlayerInput;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(KeyboardInput.class)
-public class KeyBindingMixin {
-    @WrapOperation(method="tick",at=@At(value="INVOKE",target="Lnet/minecraft/client/option/KeyBinding;isPressed()Z"),require=0)
-    private boolean rylune$sprint(KeyBinding key,Operation<Boolean> original){
-        if(RyluneUtils.config.sprint && RyluneUtils.sprintActive){
-            var mc=MinecraftClient.getInstance();
-            if(mc.currentScreen==null && key==mc.options.sprintKey) return true;
-        }
-        return original.call(key);
+public abstract class KeyBindingMixin extends Input {
+    @Inject(method="tick",at=@At("TAIL"))
+    private void rylune$sprint(CallbackInfo ci){
+        if(!RyluneUtils.config.sprint || !RyluneUtils.sprintActive || playerInput.sprint())return;
+        if(MinecraftClient.getInstance().currentScreen!=null)return;
+        var p=playerInput;
+        playerInput=new PlayerInput(p.forward(),p.backward(),p.left(),p.right(),p.jump(),p.sneak(),true);
     }
 }
