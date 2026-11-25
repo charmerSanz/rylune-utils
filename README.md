@@ -1,5 +1,5 @@
-# Rylune Utils 1.3.0
-Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All four modules are disabled initially. Uses a custom dark in-game menu; no server installation or account authentication required by the mod itself.
+# Rylune Utils 1.4.0
+Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All five modules are disabled initially. Uses a custom dark in-game menu; no server installation or account authentication required by the mod itself.
 
 ## Controls
 - Right Shift: open/close the menu (Escape backs out of settings or closes the menu).
@@ -10,7 +10,7 @@ Client-only Fabric mod for Minecraft Java 1.21.11, Java 21. All four modules are
 ## Features
 Monochrome black/charcoal theme, rounded panels, responsive sidebar or compact category tabs, animated switches and hover states, search, independent toggles, paginated settings, color hex input, adjustable values, previews, reset buttons and JSON persistence (config/rylune-utils.json). Zoom: 2–12x, hold/toggle, smoothing and speed. Sprint: optional status HUD (off by default), position, color and death reset. Crosshair: plus/dot/T/square, gap, size, thickness, outline, dot, RGB and opacity. Block overlay: outline RGB, width, opacity and outline opacity.
 
-## 1.3.0 performance and customization
+## 1.4.0 performance and customization
 - Crosshair editor: draw or erase on a 15×15 grid, with a single selectable RGB color and live preview. Custom shape is saved in JSON.
 - HSV color wheel and brightness control for crosshair and block outline. Existing RGB controls and hex field remain.
 - Crosshair presets and drawings are rasterized into one cached 65×65 GPU texture; only regenerate on changes. Only the vanilla crosshair drawing call is intercepted, not every GUI sprite.
@@ -27,8 +27,11 @@ Monochrome black/charcoal theme, rounded panels, responsive sidebar or compact c
 - Existing configurations are migrated once: preserve colors, designs and module states; turn off smoothing and sprint HUD, reset outline width to one and remove fill.
 - No FPS benchmark is claimed. For diagnosis compare identical world/settings with mod removed, installed with all modules disabled, and one module enabled at a time.
 
+## Motion Blur (1.4.0)
+Disabled by default. Open Right Shift > Motion Blur settings. Lite (3 taps), Balanced (5), High (7). Strength, sensitivity, maximum radius, deadzone, automatic/fixed direction, adaptive quality, configurable minimum FPS, first-person-only and zoom exclusion. Camera rotation drives a spatial directional effect; moving objects or pure translation alone do not blur. No frame accumulation, history buffers or depth pass. One directional sampling pass and one copy into the main framebuffer using Minecraft's existing pooled targets. Skips idle camera, open screens, world/camera changes, other vanilla post effects, and (conservatively) any Iris or VulkanMod installation. Intended for vanilla OpenGL/Fabric; Sodium compatibility needs testing. On shader load/render error it disables itself for the session and logs a warning. FPS protection is based on reported FPS and frame duration and does not guarantee zero FPS cost. Presets quantize radius to six values. Use Lite, strength 35%, minimum FPS 60 and adaptive quality on for low-end GPUs.
+
 ## Build locally
-Install Java 21 and Gradle 9.2.1. From this folder run gradle clean build. The distributable (not the sources JAR) is build/libs/rylune-utils-1.21.11-1.3.0.jar. No Gradle wrapper is included; use an installed Gradle or the supplied GitHub Actions workflow.
+Install Java 21 and Gradle 9.2.1. From this folder run gradle clean build. The distributable (not the sources JAR) is build/libs/rylune-utils-1.21.11-1.4.0.jar. No Gradle wrapper is included; use an installed Gradle or the supplied GitHub Actions workflow.
 
 ## Build on GitHub
 The supplied workflow builds the project and publishes the versioned JAR after a successful build. In Actions select Build Rylune Utils > Run workflow.

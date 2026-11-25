@@ -14,12 +14,12 @@ import java.util.function.*;
 public final class ModuleScreen extends Screen {
     private static final int BG=0xFF101010, SIDE=0xFF141414, CARD=0xFF1A1A1A, HOVER=0xFF252525,
         BORDER=0xFF2C2C2C, WHITE=0xFFF5F5F5, MUTED=0xFFA3A3A3, DIM=0xFF777777, ACCENT=0xFFE8E8E8;
-    private static final String[] NAMES={"Zoom","Toggle Sprint","Custom Crosshair","Block Overlay"};
-    private static final String[] DESC={"See farther with smooth zoom","Sprint without holding a key","Make the reticle your own","Highlight the block you target"};
-    private static final String[] TYPE={"VISUAL","MOVEMENT","HUD","VISUAL"};
+    private static final String[] NAMES={"Zoom","Toggle Sprint","Custom Crosshair","Block Overlay","Motion Blur"};
+    private static final String[] DESC={"See farther with smooth zoom","Sprint without holding a key","Make the reticle your own","Highlight the block you target","Adaptive camera motion blur"};
+    private static final String[] TYPE={"VISUAL","MOVEMENT","HUD","VISUAL","VISUAL"};
     private static final String[] FILTERS={"All","Visual","Movement","HUD","Enabled"};
     private final List<Hit> hits=new ArrayList<>();
-    private final float[] hoverState=new float[4], switchState=new float[4];
+    private final float[] hoverState=new float[5], switchState=new float[5];
     private record Hit(int x,int y,int w,int h,Runnable action) {boolean contains(double mx,double my){return mx>=x&&mx<x+w&&my>=y&&my<y+h;}}
     private record Setting(String label,Supplier<String> text,Runnable minus,Runnable plus,IntSupplier color) {}
     private TextFieldWidget search,hex;
@@ -28,7 +28,7 @@ public final class ModuleScreen extends Screen {
     private long opened=System.nanoTime(),lastFrame=opened;
     private float frame=0.15f;
     private Config c(){return RyluneUtils.config;}
-    public ModuleScreen(){super(Text.literal("Rylune Utils"));for(int i=0;i<4;i++)switchState[i]=c().enabled(i)?1:0;}
+    public ModuleScreen(){super(Text.literal("Rylune Utils"));for(int i=0;i<NAMES.length;i++)switchState[i]=c().enabled(i)?1:0;}
     @Override protected void init(){
         pw=Math.min(660,width-12);ph=Math.min(390,height-12);px=(width-pw)/2;py=(height-ph)/2;
         side=pw>=390&&ph>=183?104:0;contentX=px+side+12;contentW=pw-side-24;
@@ -38,7 +38,7 @@ public final class ModuleScreen extends Screen {
             search=new TextFieldWidget(textRenderer,searchX+19,py+15,searchW-25,12,Text.literal("Search modules"));
             search.setDrawsBackground(false);search.setTextShadow(false);search.setEditableColor(WHITE);search.setMaxLength(60);search.setText(query);search.setPlaceholder(Text.literal("Search..."));
             search.setChangedListener(s->{query=s;page=0;});addDrawableChild(search);
-        }else if(selected!=0){
+        }else if(selected>0&&selected<4){
             hex=new TextFieldWidget(textRenderer,px+pw-76,py+ph-21,62,12,Text.literal("RGB hex color"));
             hex.setDrawsBackground(false);hex.setTextShadow(false);hex.setEditableColor(WHITE);hex.setMaxLength(7);hex.setText(String.format("#%06X",getColor()));
             hex.setChangedListener(s->{if(s.matches("#?[0-9a-fA-F]{6}")){setColor(Integer.parseInt(s.replace("#",""),16));c().save();}});addDrawableChild(hex);
@@ -75,7 +75,7 @@ public final class ModuleScreen extends Screen {
     private void gear(DrawContext d,int x,int y,int col){border(d,x-4,y-4,9,9,col);d.fill(x-1,y-6,x+2,y-4,col);d.fill(x-1,y+5,x+2,y+7,col);d.fill(x-6,y-1,x-4,y+2,col);d.fill(x+5,y-1,x+7,y+2,col);d.fill(x-1,y-1,x+2,y+2,col);}
     @Override public void render(DrawContext d,int mx,int my,float delta){
         
-        hits.clear();for(int i=0;i<4;i++)switchState[i]=c().enabled(i)?1:0;
+        hits.clear();for(int i=0;i<NAMES.length;i++)switchState[i]=c().enabled(i)?1:0;
         // Draw the dimmer directly: never invokes a shader or blur pass.
         d.fill(0,0,width,height,0xDA000000);
         round(d,px-3,py-2,pw+6,ph+7,12,0x70000000);panel(d,px,py,pw,ph,9,BG,BORDER);
@@ -94,7 +94,7 @@ public final class ModuleScreen extends Screen {
             if(i==0){for(int k=0;k<4;k++)round(d,x+10+(k%2)*5,y+6+(k/2)*5,4,4,1,active?WHITE:DIM);}else if(i==4){round(d,x+10,y+7,9,7,3,active?WHITE:DIM);}else icon(d,i==1?0:i==2?1:2,x+14,y+11,active?WHITE:DIM,4);
             text(d,FILTERS[i],x+25,y+7,active?WHITE:MUTED);hits.add(new Hit(x,y,w,21,()->{filter=f;change(-1);}));
         }
-        if(ph>=220){d.fill(px+12,py+ph-40,px+side-12,py+ph-39,BORDER);text(d,"RYLUNE UTILS",px+12,py+ph-29,DIM);text(d,"v1.3.0",px+12,py+ph-17,MUTED);}
+        if(ph>=220){d.fill(px+12,py+ph-40,px+side-12,py+ph-39,BORDER);text(d,"RYLUNE UTILS",px+12,py+ph-29,DIM);text(d,"v1.4.0",px+12,py+ph-17,MUTED);}
     }
     private void renderModules(DrawContext d,int mx,int my){
         int x=contentX; if(side>0)text(d,"Modules",x,py+16,WHITE);
@@ -103,14 +103,14 @@ public final class ModuleScreen extends Screen {
         int top=py+49;
         if(side==0){int gap=3,tab=(contentW-gap*4)/5;for(int i=0;i<5;i++){final int f=i;button(d,x+i*(tab+gap),top,tab,18,FILTERS[i],mx,my,filter==i,()->{filter=f;page=0;});}top+=24;}
         var ids=new ArrayList<Integer>();String q=query.toLowerCase(Locale.ROOT).trim();int active=0;
-        for(int i=0;i<4;i++){if(c().enabled(i))active++;if((NAMES[i]+" "+DESC[i]+" "+TYPE[i]).toLowerCase(Locale.ROOT).contains(q)&&(filter==0||filter==1&&TYPE[i].equals("VISUAL")||filter==2&&TYPE[i].equals("MOVEMENT")||filter==3&&TYPE[i].equals("HUD")||filter==4&&c().enabled(i)))ids.add(i);}
+        for(int i=0;i<NAMES.length;i++){if(c().enabled(i))active++;if((NAMES[i]+" "+DESC[i]+" "+TYPE[i]).toLowerCase(Locale.ROOT).contains(q)&&(filter==0||filter==1&&TYPE[i].equals("VISUAL")||filter==2&&TYPE[i].equals("MOVEMENT")||filter==3&&TYPE[i].equals("HUD")||filter==4&&c().enabled(i)))ids.add(i);}
         text(d,FILTERS[filter].equals("All")?"All modules":FILTERS[filter]+" modules",x,top,WHITE);
         String count=active+" enabled";text(d,count,x+contentW-textRenderer.getWidth(count),top,MUTED);top+=17;
         int cols=contentW>=230?2:1,gap=7,cardW=(contentW-(cols-1)*gap)/cols;
         int usable=Math.max(1,py+ph-28-top),rows=usable>=129?2:1,cardH=Math.min(104,Math.max(46,(usable-(rows-1)*gap)/rows)),per=rows*cols,maxPage=Math.max(0,(ids.size()-1)/per);page=Math.min(page,maxPage);
         for(int j=page*per;j<Math.min(ids.size(),(page+1)*per);j++){int k=j-page*per;renderCard(d,ids.get(j),x+(k%cols)*(cardW+gap),top+(k/cols)*(cardH+gap),cardW,cardH,mx,my);}
         if(ids.isEmpty()){center(d,"No modules found",x+contentW/2,top+22,WHITE);center(d,"Try a different search",x+contentW/2,top+36,MUTED);}
-        int foot=py+ph-23;d.fill(x,foot-4,x+contentW,foot-3,BORDER);button(d,x,foot,69,18,"Disable all",mx,my,false,()->{c().zoom=false;c().sprint=false;c().crosshair=false;c().block=false;RyluneUtils.sprintActive=false;RyluneUtils.zoomLatched=false;c().save();});
+        int foot=py+ph-23;d.fill(x,foot-4,x+contentW,foot-3,BORDER);button(d,x,foot,69,18,"Disable all",mx,my,false,()->{c().zoom=false;c().sprint=false;c().crosshair=false;c().block=false;c().motionBlur=false;RyluneUtils.sprintActive=false;RyluneUtils.zoomLatched=false;c().save();});
         if(maxPage>0){button(d,x+contentW-43,foot,19,18,"<",mx,my,false,()->page=Math.max(0,page-1));button(d,x+contentW-21,foot,19,18,">",mx,my,false,()->page=Math.min(maxPage,page+1));}else{String hint="RIGHT SHIFT";text(d,hint,x+contentW-textRenderer.getWidth(hint),foot+6,DIM);}
     }
     private void renderCard(DrawContext d,int id,int x,int y,int w,int h,int mx,int my){
@@ -124,7 +124,7 @@ public final class ModuleScreen extends Screen {
         if(h>=84&&w>=115){String type=TYPE[id];text(d,type,x+w-8-textRenderer.getWidth(type),y+11,DIM);}
     }
     private void icon(DrawContext d,int id,int x,int y,int col,int r){
-        switch(id){case 0->{border(d,x-r,y-r,2*r-3,2*r-3,col);for(int i=0;i<4;i++)d.fill(x+r-4+i,y+r-4+i,x+r-2+i,y+r-2+i,col);}case 1->{for(int i=0;i<3;i++){int a=(i==1?2:0);d.fill(x-r+a,y-r+i*5,x+r-2+a,y-r+i*5+2,col);}}case 2->{d.fill(x-r,y,x-2,y+1,col);d.fill(x+3,y,x+r+1,y+1,col);d.fill(x,y-r,x+1,y-2,col);d.fill(x,y+3,x+1,y+r+1,col);d.fill(x,y,x+1,y+1,col);}case 3->{border(d,x-r+1,y-r+1,2*r-1,2*r-1,col);d.fill(x-r+4,y-r+4,x-r+6,y-r+6,col);}}
+        switch(id){case 0->{border(d,x-r,y-r,2*r-3,2*r-3,col);for(int i=0;i<NAMES.length;i++)d.fill(x+r-4+i,y+r-4+i,x+r-2+i,y+r-2+i,col);}case 1->{for(int i=0;i<3;i++){int a=(i==1?2:0);d.fill(x-r+a,y-r+i*5,x+r-2+a,y-r+i*5+2,col);}}case 2->{d.fill(x-r,y,x-2,y+1,col);d.fill(x+3,y,x+r+1,y+1,col);d.fill(x,y-r,x+1,y-2,col);d.fill(x,y+3,x+1,y+r+1,col);d.fill(x,y,x+1,y+1,col);}case 3->{border(d,x-r+1,y-r+1,2*r-1,2*r-1,col);d.fill(x-r+4,y-r+4,x-r+6,y-r+6,col);}case 4->{for(int i=0;i<3;i++){int y0=y-r+2+i*4;d.fill(x-r+i*2,y0,x+r,y0+2,col);}}}
     }
     private Setting number(String name,IntSupplier get,IntConsumer set,int min,int max,int step,String suffix){return new Setting(name,()->get.getAsInt()+suffix,()->set.accept(Config.clamp(get.getAsInt()-step,min,max)),()->set.accept(Config.clamp(get.getAsInt()+step,min,max)),null);}
     private Setting bool(String name,BooleanSupplier get,Consumer<Boolean> set){Runnable t=()->set.accept(!get.getAsBoolean());return new Setting(name,()->get.getAsBoolean()?"On":"Off",t,t,null);}
@@ -135,10 +135,24 @@ public final class ModuleScreen extends Screen {
         case 0->{s.add(number("Magnification",()->c.zoomFactor,v->c.zoomFactor=v,2,12,1,"x"));s.add(bool("Toggle mode",()->c.zoomToggle,v->{c.zoomToggle=v;RyluneUtils.zoomLatched=false;}));s.add(bool("Smooth transition",()->c.zoomSmooth,v->c.zoomSmooth=v));s.add(number("Transition speed",()->c.zoomSpeed,v->c.zoomSpeed=v,3,24,1,""));}
         case 1->{s.add(bool("Show sprint status",()->c.sprintHud,v->c.sprintHud=v));s.add(bool("Reset after death / world",()->c.sprintReset,v->c.sprintReset=v));s.add(number("HUD X",()->c.sprintX,v->c.sprintX=v,0,200,4,""));s.add(number("HUD Y",()->c.sprintY,v->c.sprintY=v,0,200,4,""));}
         case 2->{String[] shapes={"Plus","Dot","T-shape","Square","Drawn"};s.add(new Setting("Shape",()->shapes[c.crossShape],()->c.crossShape=(c.crossShape+4)%5,()->c.crossShape=(c.crossShape+1)%5,null));s.add(number("Length",()->c.crossLength,v->c.crossLength=v,1,16,1,""));s.add(number("Gap",()->c.crossGap,v->c.crossGap=v,0,12,1,""));s.add(number("Thickness",()->c.crossThickness,v->c.crossThickness=v,1,5,1,""));s.add(number("Opacity",()->c.crossOpacity,v->c.crossOpacity=v,10,100,5,"%"));s.add(bool("Center dot",()->c.crossDot,v->c.crossDot=v));s.add(bool("Black outline",()->c.crossOutline,v->c.crossOutline=v));}
+        case 4->{
+            String[] quality={"Lite","Balanced","High"}, directions={"Auto","Horizontal","Vertical","Diagonal /","Diagonal \\"};
+            s.add(new Setting("Quality",()->quality[c.blurQuality],()->c.blurQuality=(c.blurQuality+2)%3,()->c.blurQuality=(c.blurQuality+1)%3,null));
+            s.add(number("Strength",()->c.blurStrength,v->c.blurStrength=v,0,100,5,"%"));
+            s.add(number("Sensitivity",()->c.blurSensitivity,v->c.blurSensitivity=v,10,100,5,"%"));
+            s.add(number("Max radius",()->c.blurMaxRadius,v->c.blurMaxRadius=v,2,16,2,"px"));
+            s.add(number("Motion deadzone",()->c.blurDeadzone,v->c.blurDeadzone=v,0,100,5,"%"));
+            s.add(new Setting("Direction",()->directions[c.blurDirection],()->c.blurDirection=(c.blurDirection+4)%5,()->c.blurDirection=(c.blurDirection+1)%5,null));
+            s.add(bool("Adaptive quality",()->c.blurAdaptive,v->c.blurAdaptive=v));
+            s.add(bool("FPS protection",()->c.blurFpsGuard,v->c.blurFpsGuard=v));
+            s.add(number("Minimum FPS",()->c.blurMinFps,v->c.blurMinFps=v,20,240,5,""));
+            s.add(bool("First person only",()->c.blurFirstPersonOnly,v->c.blurFirstPersonOnly=v));
+            s.add(bool("Blur while zoomed",()->c.blurWhileZoom,v->c.blurWhileZoom=v));
+        }
         case 3->{s.add(number("Outline width",()->c.blockWidth,v->c.blockWidth=v,1,6,1,""));s.add(number("Outline opacity",()->c.blockOpacity,v->c.blockOpacity=v,10,100,5,"%"));}
     }if(selected==2){s.add(0,new Setting("Draw your crosshair",()->"Edit",()->client.setScreen(new CrosshairEditor(this)),()->client.setScreen(new CrosshairEditor(this)),null));}
         if(selected==2||selected==3){s.add(selected==2?1:0,new Setting("Color wheel",()->"Open",()->client.setScreen(new ColorWheelScreen(this,()->getColor(),v->setColor(v))),()->client.setScreen(new ColorWheelScreen(this,()->getColor(),v->setColor(v))),null));}
-        if(selected!=0){String[] labels={"Red","Green","Blue"};for(int i=0;i<3;i++){final int shift=(2-i)*8;s.add(new Setting(labels[i],()->Integer.toString((getColor()>>shift)&255),()->updateChannel(shift,-5),()->updateChannel(shift,5),()->0xFF000000|getColor()));}}return s;}
+        if(selected>0&&selected<4){String[] labels={"Red","Green","Blue"};for(int i=0;i<3;i++){final int shift=(2-i)*8;s.add(new Setting(labels[i],()->Integer.toString((getColor()>>shift)&255),()->updateChannel(shift,-5),()->updateChannel(shift,5),()->0xFF000000|getColor()));}}return s;}
     private void renderSettings(DrawContext d,int mx,int my){
         int x=contentX,w=contentW;button(d,x,py+10,23,20,"<",mx,my,false,()->change(-1));text(d,textRenderer.trimToWidth(NAMES[selected],w-62),x+30,py+16,WHITE);
         d.fill(x,py+39,x+w,py+40,BORDER);
@@ -153,12 +167,12 @@ public final class ModuleScreen extends Screen {
             else{if(a.color!=null&&listW>=160)round(d,x+listW-87,y+7,8,8,2,a.color.getAsInt());button(d,x+listW-75,y+3,16,16,"-",mx,my,false,()->{a.minus.run();c().save();});center(d,value,x+listW-38,y+7,WHITE);button(d,x+listW-18,y+3,16,16,"+",mx,my,false,()->{a.plus.run();c().save();});}
         }
         if(preview>0){int bx=x+listW+9,bh=available;panel(d,bx,top,preview,bh,6,SIDE,BORDER);center(d,"LIVE PREVIEW",bx+preview/2,top+9,DIM);int cx=bx+preview/2,cy=top+bh/2+6;
-            if(bh>=55){if(selected==2)Crosshair.draw(d,cx,cy);else if(selected==3){int color=RyluneUtils.argb(c().blockColor,c().blockOpacity);for(int i=0;i<c().blockWidth;i++)border(d,cx-16+i,cy-16+i,32-2*i,32-2*i,color);}else if(selected==1)center(d,"Sprint: ready",cx,cy,0xFF000000|c().sprintColor);else{icon(d,0,cx,cy-8,WHITE,8);center(d,c().zoomFactor+"x",cx,cy+8,WHITE);}}}
+            if(bh>=55){if(selected==2)Crosshair.draw(d,cx,cy);else if(selected==3){int color=RyluneUtils.argb(c().blockColor,c().blockOpacity);for(int i=0;i<c().blockWidth;i++)border(d,cx-16+i,cy-16+i,32-2*i,32-2*i,color);}else if(selected==1)center(d,"Sprint: ready",cx,cy,0xFF000000|c().sprintColor);else if(selected==4){icon(d,4,cx,cy-8,WHITE,8);center(d,c().blurStrength+"%",cx,cy+8,WHITE);}else{icon(d,0,cx,cy-8,WHITE,8);center(d,c().zoomFactor+"x",cx,cy+8,WHITE);}}}
         int y=py+ph-27;d.fill(x,y-3,x+w,y-2,BORDER);button(d,x,y,18,20,"<",mx,my,false,()->page=Math.max(0,page-1));center(d,(page+1)+"/"+(maxPage+1),x+34,y+6,MUTED);button(d,x+50,y,18,20,">",mx,my,false,()->page=Math.min(maxPage,page+1));
         button(d,x+73,y,39,20,"Reset",mx,my,false,()->{reset();init();});
-        if(selected!=0){int hx=px+pw-82;panel(d,hx,y,70,20,4,SIDE,BORDER);if(w>=235){round(d,hx-20,y+4,12,12,3,0xFF000000|getColor());text(d,"HEX",hx-43,y+6,DIM);}}else if(w>=235){String hint="Change keys in Controls";text(d,hint,x+w-textRenderer.getWidth(hint),y+6,DIM);}
+        if(selected>0&&selected<4){int hx=px+pw-82;panel(d,hx,y,70,20,4,SIDE,BORDER);if(w>=235){round(d,hx-20,y+4,12,12,3,0xFF000000|getColor());text(d,"HEX",hx-43,y+6,DIM);}}else if(w>=235){String hint=selected==4?"Off when idle":"Change keys in Controls";text(d,hint,x+w-textRenderer.getWidth(hint),y+6,DIM);}
     }
-    private void reset(){Config n=new Config(),c=c();switch(selected){case 0->{c.zoomFactor=n.zoomFactor;c.zoomSpeed=n.zoomSpeed;c.zoomSmooth=n.zoomSmooth;c.zoomToggle=n.zoomToggle;RyluneUtils.zoomLatched=false;}case 1->{c.sprintHud=n.sprintHud;c.sprintReset=n.sprintReset;c.sprintX=n.sprintX;c.sprintY=n.sprintY;c.sprintColor=n.sprintColor;}case 2->{c.crossColor=n.crossColor;c.crossOpacity=n.crossOpacity;c.crossLength=n.crossLength;c.crossGap=n.crossGap;c.crossThickness=n.crossThickness;c.crossShape=n.crossShape;c.crossDot=n.crossDot;c.crossOutline=n.crossOutline;c.customPixels=n.customPixels;}case 3->{c.blockColor=n.blockColor;c.blockOpacity=n.blockOpacity;c.blockWidth=n.blockWidth;c.blockFillOpacity=n.blockFillOpacity;}}c.save();}
+    private void reset(){Config n=new Config(),c=c();switch(selected){case 0->{c.zoomFactor=n.zoomFactor;c.zoomSpeed=n.zoomSpeed;c.zoomSmooth=n.zoomSmooth;c.zoomToggle=n.zoomToggle;RyluneUtils.zoomLatched=false;}case 1->{c.sprintHud=n.sprintHud;c.sprintReset=n.sprintReset;c.sprintX=n.sprintX;c.sprintY=n.sprintY;c.sprintColor=n.sprintColor;}case 2->{c.crossColor=n.crossColor;c.crossOpacity=n.crossOpacity;c.crossLength=n.crossLength;c.crossGap=n.crossGap;c.crossThickness=n.crossThickness;c.crossShape=n.crossShape;c.crossDot=n.crossDot;c.crossOutline=n.crossOutline;c.customPixels=n.customPixels;}case 3->{c.blockColor=n.blockColor;c.blockOpacity=n.blockOpacity;c.blockWidth=n.blockWidth;c.blockFillOpacity=n.blockFillOpacity;}case 4->{c.blurQuality=n.blurQuality;c.blurStrength=n.blurStrength;c.blurSensitivity=n.blurSensitivity;c.blurMinFps=n.blurMinFps;c.blurDeadzone=n.blurDeadzone;c.blurDirection=n.blurDirection;c.blurMaxRadius=n.blurMaxRadius;c.blurAdaptive=n.blurAdaptive;c.blurFpsGuard=n.blurFpsGuard;c.blurFirstPersonOnly=n.blurFirstPersonOnly;c.blurWhileZoom=n.blurWhileZoom;}}c.save();}
     @Override public boolean mouseClicked(Click click,boolean doubled){if(click.button()==0){for(Hit h:List.copyOf(hits))if(h.contains(click.x(),click.y())){h.action.run();return true;}}return super.mouseClicked(click,doubled);}
     @Override public boolean keyPressed(KeyInput input){if(input.key()==GLFW.GLFW_KEY_RIGHT_SHIFT){close();return true;}if(input.key()==GLFW.GLFW_KEY_ESCAPE&&selected>=0){change(-1);return true;}return super.keyPressed(input);}
     @Override public void close(){c().save();super.close();}
